@@ -1,0 +1,17 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Locale</T>
+      <T>System.Object</T>
+    </TN>
+    <ToString>Locale</ToString>
+    <Props>
+      <S N="ReadingLog">Чтение журнала безопасности</S>
+      <S N="UniqueIP">Уникальных IP адресов:</S>
+      <S N="TotalAttempts">Общее количество попыток:</S>
+      <S N="NewRule">Создание нового правила брандмауэра: Stop-Bruteforce</S>
+      <S N="SetRule">Добавление IP адресов в правило брандмауэра:</S>
+      <S N="ErrorRights">Для использования Stop-Bruteforce необходимы права администратора.</S>
+    </Props>
+  </Obj>
+</Objs>
