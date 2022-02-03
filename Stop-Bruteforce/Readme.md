@@ -16,12 +16,6 @@ Stop-Bruteforce
 
 List of parameters for **Stop-Bruteforce**:
 
-* Attempts
-* Last
-* Expire
-* BlockAnonimousLogon
-* WhatIf
-
 _Attempts_ selects by the number of failed login attempts specified in the parameter.
 
 _Last_ specifies the time period in hours for which the log should be fetched.

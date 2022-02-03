@@ -35,7 +35,7 @@ function  Get-Bruteforce {
         class BruteStatistics {
             [uint16]$Index
             [uint16]$Attempts
-            [ipaddress]$IpAddress
+            [string]$IpAddress
             [array]$UserNames
             [string]$PTR
             [datetime]$ReportDate
@@ -98,7 +98,7 @@ function  Get-Bruteforce {
             $Entry = [BruteStatistics]::new()
             $Entry.Index = $TopAttackers.indexof($i)
             $Entry.Attempts = $i.Count
-            $Entry.IpAddress = [System.Net.IPAddress]::Parse($i.Name)
+            $Entry.IpAddress = $i.Name
             $Entry.UserNames = $i.Group.Username | Select-Object -Unique
 
             [string]$PTR = ([System.Net.Dns]::Resolve($Entry.IpAddress)).Hostname

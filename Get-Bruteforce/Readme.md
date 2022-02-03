@@ -4,18 +4,14 @@ The script checks logs and displays statistics and IP addresses of attackers dep
 
 ``` Powershell
 Get-Bruteforce
-[- [-Attempts <UInt16>]
+[-Attempts <UInt16>]
 [-Last <UInt16>]
-[- [-Include Anonymous Logon]
+[-Include Anonymous Logon]
 ```
 
 # Description
 
 List of parameters for **Get-Bruteforce**:
-
-* Attempts
-* Last
-* Include Anonymous Logon
 
 _Attempts_ specifies the number of successful logins to display information about the attacker's ip address.
 

@@ -1,0 +1,18 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Locale</T>
+      <T>System.Object</T>
+    </TN>
+    <ToString>Locale</ToString>
+    <Props>
+      <S N="ReadingLog">Reading security log</S>
+      <S N="UniqueIP">Unique attackers IP:</S>
+      <S N="TotalAttempts">Total attack attempts:</S>
+      <S N="NewRule">Will create new Stop-Bruteforce firewall rule</S>
+      <S N="SetRule">Will add ipadresses to firewall rule</S>
+      <S N="ErrorParam">Supply at least one param..</S>
+      <S N="ErrorRights">To use Protect-FromBruteforce, you need administrator rights.</S>
+    </Props>
+  </Obj>
+</Objs>
