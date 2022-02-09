@@ -197,39 +197,61 @@ type public ProtectFromBruteforce() =
     override this.ProcessRecord() =
         match WindowsIdentity.GetCurrent() |> WindowsPrincipal with
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
-            let report = EventLog.getSuccessAudit last
+            match EventLog.getSuccessAudit last with
+            | report when report <> [||] ->
+                let addresses = report |> Seq.map (fun i -> i.ToString()) |> String.concat ","
 
-            let addresses = report |> Seq.map (fun i -> i.ToString()) |> String.concat ","
+                if rdp.IsPresent then
+                    match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress "
+                          + addresses
+                          |> Pwsh.invoke with
+                    | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP TCP"
+                    | _ -> ()
 
-            if rdp.IsPresent then
-                match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress " + addresses
-                      |> Pwsh.invoke with
-                | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP TCP"
-                | _ -> ()
+                    match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress "
+                          + addresses
+                          |> Pwsh.invoke with
+                    | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP UDP"
+                    | _ -> ()
 
-                match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress " + addresses
-                      |> Pwsh.invoke with
-                | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP UDP"
-                | _ -> ()
+                if smb.IsPresent then
+                    match @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress " + addresses
+                          |> Pwsh.invoke with
+                    | Some _ -> this.WriteVerbose "Standard firewall rule was set for SMB"
+                    | _ -> ()
 
-            if smb.IsPresent then
-                match @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress " + addresses |> Pwsh.invoke with
-                | Some _ -> this.WriteVerbose "Standard firewall rule was set for SMB"
-                | _ -> ()
+                if winRM.IsPresent then
+                    match @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress " + addresses
+                          |> Pwsh.invoke with
+                    | Some _ -> this.WriteVerbose "Standard firewall rule was set for WINRM"
+                    | _ -> ()
 
-            if winRM.IsPresent then
-                match @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress " + addresses
-                      |> Pwsh.invoke with
-                | Some _ -> this.WriteVerbose "Standard firewall rule was set for WINRM"
-                | _ -> ()
-
-            report |> Array.iter this.WriteObject
-
+                report |> Array.iter this.WriteObject
+            | _ -> this.WriteWarning "No successful network logons was detected. Cmdlet did nothing."
+            
         | _ ->
             let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
 
             this.WriteError(ErrorRecord(exn, "1", ErrorCategory.PermissionDenied, "Protect-FromBruteforce"))
 
+
+(*
+        .SYNOPSIS
+        Reset remote scope of firewall rules back to ANY.
+
+        .DESCRIPTION
+        Reset remote scope of firewall rules back to ANY.
+
+        .EXAMPLE
+        #Reset default RDP rules to ANY.
+        Unprotect-Bruteforce -RDP
+
+        .INPUTS
+        None.
+
+        .OUTPUTS
+        None.
+*)
 [<Cmdlet(VerbsSecurity.Unprotect, "FromBruteforce")>]
 type public UnprotectFromBruteforce() =
     inherit Cmdlet()
