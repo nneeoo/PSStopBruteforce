@@ -129,7 +129,7 @@ type public StopBruteforce() =
 
                     (ErrorRecord(exn, "1", ErrorCategory.InvalidResult, "Stop-Bruteforce")) |> this.WriteError
 
-            | _ -> this.WriteVerbose "Nobody to block."
+            | _ -> this.WriteWarning "No failed network logons was detected. Cmdlet did nothing."
 
         | _ ->
             let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
@@ -199,7 +199,7 @@ type public ProtectFromBruteforce() =
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
             match EventLog.getSuccessAudit last with
             | report when report <> [||] ->
-                let addresses = report |> Seq.map (fun i -> i.ToString()) |> String.concat ","
+                let addresses = report |> Array.map (fun i -> i.ToString()) |> String.concat ","
 
                 if rdp.IsPresent then
                     match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress "
@@ -228,7 +228,7 @@ type public ProtectFromBruteforce() =
 
                 report |> Array.iter this.WriteObject
             | _ -> this.WriteWarning "No successful network logons was detected. Cmdlet did nothing."
-            
+
         | _ ->
             let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
 
@@ -280,21 +280,21 @@ type public UnprotectFromBruteforce() =
             if rdp.IsPresent then
                 match @"Set-NetFirewallRule -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP TCP"
-                | _ -> ()
+                | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-TCP rule was not found"
 
                 match @"Set-NetFirewallRule -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP UDP"
-                | _ -> ()
+                | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-UDP rule was not found"
 
             if smb.IsPresent then
                 match @"Set-NetFirewallRule -Name 'FPS-SMB-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for SMB"
-                | _ -> ()
+                | _ -> this.WriteWarning "FPS-SMB-In-TCP rule was not found"
 
             if winRM.IsPresent then
                 match @"Set-NetFirewallRule -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for WINRM"
-                | _ -> ()
+                | _ -> this.WriteWarning "WINRM-HTTP-In-TCP-PUBLIC rule was not found"
         | _ ->
             let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
 
