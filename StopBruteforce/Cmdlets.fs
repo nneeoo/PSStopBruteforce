@@ -96,8 +96,8 @@ type public StopBruteforce() =
 
             let addresses = report |> Array.map (fun i -> i.IpAddress.ToString())
 
-            match @"Get-NetFirewallRule 'Stop-Bruteforce' | Get-NetFirewallAddressFilter " |> Pwsh.invoke with
-            | None ->
+            match @"Get-NetFirewallRule 'Stop-Bruteforce' | Get-NetFirewallAddressFilter " |> Pwsh.invoke, addresses with
+            | None, addresses when addresses <> [||] ->
                 match @"New-NetFirewallRule -Name 'Stop-Bruteforce' -DisplayName 'Stop-Bruteforce' -Action Block -Direction Inbound -Enabled True -RemoteAddress "
                       + (addresses |> String.concat ",")
                       |> Pwsh.invoke with
@@ -107,7 +107,7 @@ type public StopBruteforce() =
 
                     (ErrorRecord(exn, "1", ErrorCategory.InvalidResult, "Stop-Bruteforce")) |> this.WriteError
 
-            | Some psObjectsOption ->
+            | Some psObjectsOption, addresses ->
                 let before =
                     [| for p in psObjectsOption do
                            for i in p.Members.["RemoteAddress"].Value :?> string array do
@@ -122,12 +122,14 @@ type public StopBruteforce() =
 
                 match @"Set-NetFirewallRule -PassThru -Name 'Stop-Bruteforce' -RemoteAddress " + concat |> Pwsh.invoke with
                 | Some _ ->
-                    printfn "%s" "New entried was added to Stop-Bruteforce rule"
+                    this.WriteVerbose "New entried was added to Stop-Bruteforce rule"
                     report |> Array.filter (fun i -> i.Attempts >= attempts) |> Array.iter this.WriteObject
                 | None ->
                     let exn = exn "Wasn't able to set firewall rule"
 
                     (ErrorRecord(exn, "1", ErrorCategory.InvalidResult, "Stop-Bruteforce")) |> this.WriteError
+
+            | _ -> this.WriteVerbose "Nobody to block."
 
         | _ ->
             let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
@@ -202,23 +204,23 @@ type public ProtectFromBruteforce() =
             if rdp.IsPresent then
                 match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress " + addresses
                       |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was set for RDP TCP"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP TCP"
                 | _ -> ()
 
                 match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress " + addresses
                       |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was set for RDP UDP"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP UDP"
                 | _ -> ()
 
             if smb.IsPresent then
                 match @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress " + addresses |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was set for SMB"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was set for SMB"
                 | _ -> ()
 
             if winRM.IsPresent then
                 match @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress " + addresses
                       |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was set for WINRM"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was set for WINRM"
                 | _ -> ()
 
             report |> Array.iter this.WriteObject
@@ -255,21 +257,21 @@ type public UnprotectFromBruteforce() =
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
             if rdp.IsPresent then
                 match @"Set-NetFirewallRule -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was reset for RDP TCP"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP TCP"
                 | _ -> ()
 
                 match @"Set-NetFirewallRule -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress ANY" |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was reset for RDP UDP"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP UDP"
                 | _ -> ()
 
             if smb.IsPresent then
                 match @"Set-NetFirewallRule -Name 'FPS-SMB-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was reset for SMB"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was reset for SMB"
                 | _ -> ()
 
             if winRM.IsPresent then
                 match @"Set-NetFirewallRule -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress ANY" |> Pwsh.invoke with
-                | Some _ -> printfn "%s" "Standard firewall rule was reset for WINRM"
+                | Some _ -> this.WriteVerbose "Standard firewall rule was reset for WINRM"
                 | _ -> ()
         | _ ->
             let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
