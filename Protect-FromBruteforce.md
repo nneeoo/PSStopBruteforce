@@ -4,8 +4,8 @@ The script checks the logs and adds the ip address to the firewall rule dependin
 
 ``` Powershell
 Protect-FromBruteforce
-[-Attemts <UInt16>]
-[-Last <UInt16>]
+[-Attemts <int>]
+[-Last <float>]
 [-SMB]
 [-RDP]
 [-WinRM]
