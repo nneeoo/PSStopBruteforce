@@ -41,18 +41,18 @@ module EventLog =
                   && log.EntryType = EventLogEntryType.FailureAudit
                   && log.TimeWritten > timeFilter
                   && log.ReplacementStrings.[3] = "0x0" then
-
-                   match log.ReplacementStrings.[19] |> IPAddress.TryParse with
-                   | false, _ -> ()
-                   | true, x ->
-                       yield
-                           { IpAddress = x
-                             Name = log.ReplacementStrings.[5] } |]
+                   yield log |]
+        |> Array.Parallel.choose
+            (fun log ->
+                match log.ReplacementStrings.[19] |> IPAddress.TryParse with
+                | true, x when x <> IPAddress.Loopback ->
+                    { IpAddress = x
+                      Name = log.ReplacementStrings.[5] }
+                    |> Some
+                | _ -> None)
         |> Array.groupBy (fun i -> i.IpAddress)
         |> Array.Parallel.map
-            (fun i ->
-                let ip, entries = i
-
+            (fun (ip, entries) ->
                 { Attempts = entries.Length
                   IpAddress = ip
                   HostName = tryResolve ip
@@ -68,11 +68,11 @@ module EventLog =
                if log.InstanceId = 4624L
                   && log.EntryType = EventLogEntryType.SuccessAudit
                   && log.TimeWritten > timeFilter then
-                   match log.ReplacementStrings.[18] |> IPAddress.TryParse with
-                   | true, x when x <> IPAddress.Loopback -> yield x
-                   | _ -> () |]
+                   yield log |]
+        |> Array.Parallel.choose
+            (fun log ->
+                match log.ReplacementStrings.[18] |> IPAddress.TryParse with
+                | true, x when x <> IPAddress.Loopback -> Some x
+                | _ -> None)
         |> Array.groupBy id
-        |> Array.Parallel.map
-            (fun i ->
-                let a, _ = i
-                a)
+        |> Array.Parallel.map fst
