@@ -1,17 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <Import Project="..\packages\FSharp.Compiler.Tools.10.2.3\build\FSharp.Compiler.Tools.props" Condition="Exists('..\packages\FSharp.Compiler.Tools.10.2.3\build\FSharp.Compiler.Tools.props')" />
-    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-        <ProjectGuid>{514A2C59-4743-46C9-84F6-A1881B69A4D8}</ProjectGuid>
+        <TargetFramework>net472</TargetFramework>
         <OutputType>Library</OutputType>
-        <RootNamespace>StopBruteforce</RootNamespace>
-        <AssemblyName>StopBruteforce</AssemblyName>
-        <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-        <DocumentationFile>bin\$(Configuration)\$(AssemblyName).xml</DocumentationFile>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <DebugSymbols>true</DebugSymbols>
@@ -20,45 +10,22 @@
         <Tailcalls>false</Tailcalls>
         <OutputPath>bin\$(Configuration)\</OutputPath>
         <DefineConstants>DEBUG;TRACE</DefineConstants>
-        <WarningLevel>3</WarningLevel>
-        <OtherFlags>--warnon:1182</OtherFlags>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
         <DebugType>none</DebugType>
         <Optimize>true</Optimize>
         <Tailcalls>true</Tailcalls>
-        <OutputPath>bin\StopBruteforce\</OutputPath>
-        <DefineConstants>TRACE</DefineConstants>
-        <WarningLevel>3</WarningLevel>
-        <OtherFlags>--warnon:1182</OtherFlags>
+        <OutputPath>bin\$(Configuration)\</OutputPath>
     </PropertyGroup>
     <ItemGroup>
-        <Reference Include="FSharp.Core, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-          <HintPath>..\packages\FSharp.Core.6.0.3\lib\netstandard2.0\FSharp.Core.dll</HintPath>
-          <Private>True</Private>
-        </Reference>
-        <Reference Include="mscorlib" />
-        <Reference Include="System" />
-        <Reference Include="System.Core" />
-        <Reference Include="System.Management.Automation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
-          <HintPath>..\..\..\..\..\Windows\assembly\GAC_MSIL\System.Management.Automation\1.0.0.0__31bf3856ad364e35\System.Management.Automation.dll</HintPath>
-        </Reference>
-        <Reference Include="System.Numerics" />
         <Content Include="StopBruteforce.psd1">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
+        <Compile Include="Miscs.fs"/>
+        <Compile Include="Cmdlets.fs"/>
+        <Reference Include="System.Management.Automation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
+            <HintPath>..\..\..\..\..\Windows\assembly\GAC_MSIL\System.Management.Automation\1.0.0.0__31bf3856ad364e35\System.Management.Automation.dll</HintPath>
+        </Reference>
+        <PackageReference Update="FSharp.Core" Version="6.0.3"/>
     </ItemGroup>
-    <ItemGroup>
-        <Compile Include="AssemblyInfo.fs" />
-        <Compile Include="Miscs.fs" />
-        <Compile Include="Cmdlets.fs" />
-        <Content Include="packages.config" />
-    </ItemGroup>
-    <Import Project="$(FSharpTargetsPath)" Condition="Exists('$(FSharpTargetsPath)')" />
-    <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-      <PropertyGroup>
-        <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105.The missing file is {0}.</ErrorText>
-      </PropertyGroup>
-      <Error Condition="!Exists('..\packages\FSharp.Compiler.Tools.10.2.3\build\FSharp.Compiler.Tools.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\FSharp.Compiler.Tools.10.2.3\build\FSharp.Compiler.Tools.props'))" />
-    </Target>
 </Project>
