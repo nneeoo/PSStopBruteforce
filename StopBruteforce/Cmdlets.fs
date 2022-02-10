@@ -27,12 +27,12 @@ type public GetBruteforce() =
     let mutable attempts = 10
     let mutable last = 24.0
 
-    [<Parameter(Position = 0); ValidateNotNull>]
+    [<Parameter(Position = 0); ValidateRange(1,65535)>]
     member x.Attempts
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateNotNull>]
+    [<Parameter(Position = 1); ValidateRange(1,65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
@@ -74,12 +74,12 @@ type public StopBruteforce() =
     let mutable last = 24.0
     let mutable expire = SwitchParameter(false)
 
-    [<Parameter(Position = 0); ValidateNotNull>]
+    [<Parameter(Position = 0); ValidateRange(1,65535)>]
     member x.Attempts
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateNotNull>]
+    [<Parameter(Position = 1); ValidateRange(1,65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
@@ -164,12 +164,12 @@ type public ProtectFromBruteforce() =
     let mutable smb: SwitchParameter = SwitchParameter(false)
     let mutable winRM: SwitchParameter = SwitchParameter(false)
 
-    [<Parameter(Position = 0); ValidateNotNull>]
+    [<Parameter(Position = 0); ValidateRange(1,65535)>]
     member x.Attempts
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateNotNull>]
+    [<Parameter(Position = 1); ValidateRange(1,65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
