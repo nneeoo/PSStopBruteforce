@@ -1,5 +1,12 @@
 # Change log
 
+### 1.0.5
+- Slightly faster event log search
+- Cmdlets write warnings if nothing happened
+- Get-Bruteforce now collect usernames 
+- Add Cmdlet input validation
+- Fix false warnings
+
 ### 1.0.4
 
 - Protect-FromBruteforce - do nothing if no network logons was found
