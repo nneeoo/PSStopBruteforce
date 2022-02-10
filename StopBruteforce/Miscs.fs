@@ -9,7 +9,11 @@ open System.Management.Automation
 type Report =
     { Attempts: int
       IpAddress: IPAddress
-      HostName: string }
+      HostName: string
+      Names: string array }
+
+[<Struct; NoEquality; NoComparison>]
+type Entry = { IpAddress: IPAddress; Name: string }
 
 [<RequireQualifiedAccess>]
 module Pwsh =
@@ -17,7 +21,7 @@ module Pwsh =
         use pwsh = PowerShell.Create().AddScript(x)
 
         match pwsh.Invoke() with
-        | res when res <> null  && res.Count > 0 -> Some res
+        | res when res <> null && res.Count > 0 -> Some res
         | _ -> None
 
 let tryResolve (x: IPAddress) =
@@ -43,16 +47,20 @@ module EventLog =
                   && log.ReplacementStrings.[3] = "0x0" then
 
                    match log.ReplacementStrings.[19] |> IPAddress.TryParse with
-                   | true, x -> yield x
-                   | _ -> () |]
-        |> Array.groupBy id
+                   | false, _ -> ()
+                   | true, x ->
+                       yield
+                           { IpAddress = x
+                             Name = log.ReplacementStrings.[5] } |]
+        |> Array.groupBy (fun i -> i.IpAddress)
         |> Array.Parallel.map
             (fun i ->
-                let a, b = i
+                let ip, entries = i
 
-                { Attempts = b.Length
-                  IpAddress = a
-                  HostName = tryResolve a })
+                { Attempts = entries.Length
+                  IpAddress = ip
+                  HostName = tryResolve ip
+                  Names = entries |> Array.map (fun i -> i.Name) |> Array.distinct })
 
 
     let getSuccessAudit (l: float) =
@@ -65,7 +73,9 @@ module EventLog =
             |> Array.head
 
         [| for log in securityLogs do
-               if log.InstanceId = 4624L && log.EntryType = EventLogEntryType.SuccessAudit && log.TimeWritten > timeFilter then
+               if log.InstanceId = 4624L
+                  && log.EntryType = EventLogEntryType.SuccessAudit
+                  && log.TimeWritten > timeFilter then
                    match log.ReplacementStrings.[18] |> IPAddress.TryParse with
                    | true, x when x <> IPAddress.Loopback -> yield x
                    | _ -> () |]
