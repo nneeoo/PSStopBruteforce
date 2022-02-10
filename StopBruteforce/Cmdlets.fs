@@ -9,7 +9,7 @@ open Miscs
         Get audit failure bruteforce attacks.
 
         .DESCRIPTION
-        Read Windows Event Log, search for Audit Failure and Audit success anonimous logon.
+        Read Windows Event Log, search for Audit Failure and Audit success anonymous logon.
         Return array of BruteStatistics.
 
          .EXAMPLE
@@ -55,10 +55,10 @@ type public GetBruteforce() =
 
         .DESCRIPTION
         Read Windows Event Log, search for Audit Failure.
-        Adds ip adresses of attackers to deny firewall rule.
+        Adds ip addresses of attackers to deny firewall rule.
 
          .EXAMPLE
-        #Block attackers ip adresses with default params.
+        #Block attackers ip addresses with default params.
         Stop-Bruteforce
 
         .INPUTS
@@ -109,20 +109,15 @@ type public StopBruteforce() =
 
             | Some psObjectsOption, addresses ->
                 let before =
-                    [| for p in psObjectsOption do
-                           for i in p.Members.["RemoteAddress"].Value :?> string array do
-                               yield i |]
+                    match psObjectsOption :> PSObject seq |> Seq.tryHead, this.Expire.IsPresent with
+                    | Some p, false -> p.Members.["RemoteAddress"].Value :?> string array
+                    | _ -> Array.empty
 
-                let concat =
-                    if this.Expire.IsPresent then
-                        addresses
-                    else
-                        [| before; addresses |] |> Array.concat |> Array.distinct
-                    |> String.concat ","
+                let concat = [| before; addresses |] |> Array.concat |> Array.distinct |> String.concat ","
 
                 match @"Set-NetFirewallRule -PassThru -Name 'Stop-Bruteforce' -RemoteAddress " + concat |> Pwsh.invoke with
                 | Some _ ->
-                    this.WriteVerbose "New entried was added to Stop-Bruteforce rule"
+                    this.WriteVerbose "New entries was added to Stop-Bruteforce rule"
                     report |> Array.filter (fun i -> i.Attempts >= attempts) |> Array.iter this.WriteObject
                 | None ->
                     let exn = exn "Wasn't able to set firewall rule"
@@ -140,14 +135,14 @@ type public StopBruteforce() =
 
 (*
         .SYNOPSIS
-        Add ip adresses from successfull network logins to firewall.
+        Add ip addresses from successful network logins to firewall.
 
         .DESCRIPTION
-        Read Windows Event Log, search for Audit Seccess.
-        Adds ip adresses of non anonimous users to default firewall rules.
+        Read Windows Event Log, search for Audit Success.
+        Adds ip addresses of non anonymous users to default firewall rules.
 
         .EXAMPLE
-        #Add IP adresses into remote desktop.
+        #Add IP addresses into remote desktop.
         Protect-FromBruteforce -rdp
 
         .EXAMPLE
@@ -278,21 +273,24 @@ type public UnprotectFromBruteforce() =
         match WindowsIdentity.GetCurrent() |> WindowsPrincipal with
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
             if rdp.IsPresent then
-                match @"Set-NetFirewallRule -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
+                match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress ANY"
+                      |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP TCP"
                 | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-TCP rule was not found"
 
-                match @"Set-NetFirewallRule -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress ANY" |> Pwsh.invoke with
+                match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress ANY"
+                      |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP UDP"
                 | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-UDP rule was not found"
 
             if smb.IsPresent then
-                match @"Set-NetFirewallRule -Name 'FPS-SMB-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
+                match @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for SMB"
                 | _ -> this.WriteWarning "FPS-SMB-In-TCP rule was not found"
 
             if winRM.IsPresent then
-                match @"Set-NetFirewallRule -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress ANY" |> Pwsh.invoke with
+                match @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress ANY"
+                      |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for WINRM"
                 | _ -> this.WriteWarning "WINRM-HTTP-In-TCP-PUBLIC rule was not found"
         | _ ->
