@@ -34,13 +34,9 @@ module EventLog =
     let getFailureAudit (l: float) =
         let timeFilter = DateTime.Now.AddHours(-l)
 
-        let securityLogs =
-            EventLog.GetEventLogs()
-            |> Array.filter (fun (i: EventLog) -> i.Log = "Security")
-            |> Array.map (fun i -> i.Entries)
-            |> Array.head
+        let securityLogs = EventLog.GetEventLogs() |> Array.find (fun (i: EventLog) -> i.Log = "Security")
 
-        [| for log in securityLogs do
+        [| for log in securityLogs.Entries do
                if log.InstanceId = 4625L
                   && log.EntryType = EventLogEntryType.FailureAudit
                   && log.TimeWritten > timeFilter
@@ -66,13 +62,9 @@ module EventLog =
     let getSuccessAudit (l: float) =
         let timeFilter = DateTime.Now.AddHours(-l)
 
-        let securityLogs =
-            EventLog.GetEventLogs()
-            |> Array.filter (fun (i: EventLog) -> i.Log = "Security")
-            |> Array.map (fun i -> i.Entries)
-            |> Array.head
+        let securityLogs = EventLog.GetEventLogs() |> Array.find (fun (i: EventLog) -> i.Log = "Security")
 
-        [| for log in securityLogs do
+        [| for log in securityLogs.Entries do
                if log.InstanceId = 4624L
                   && log.EntryType = EventLogEntryType.SuccessAudit
                   && log.TimeWritten > timeFilter then

@@ -201,25 +201,25 @@ type public ProtectFromBruteforce() =
                           + addresses
                           |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP TCP"
-                    | _ -> ()
+                    | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-TCP rule was not found"
 
                     match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress "
                           + addresses
                           |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP UDP"
-                    | _ -> ()
+                    | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-UDP rule was not found"
 
                 if smb.IsPresent then
                     match @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress " + addresses
                           |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for SMB"
-                    | _ -> ()
+                    | _ -> this.WriteWarning "FPS-SMB-In-TCP rule was not found"
 
                 if winRM.IsPresent then
                     match @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress " + addresses
                           |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for WINRM"
-                    | _ -> ()
+                    | _ -> this.WriteWarning "WINRM-HTTP-In-TCP-PUBLIC rule was not found"
 
                 report |> Array.iter this.WriteObject
             | _ -> this.WriteWarning "No successful network logons was detected. Cmdlet did nothing."
