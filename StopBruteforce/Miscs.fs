@@ -39,8 +39,7 @@ module EventLog =
         [| for log in securityLogs.Entries do
                if log.InstanceId = 4625L
                   && log.EntryType = EventLogEntryType.FailureAudit
-                  && log.TimeWritten > timeFilter
-                  && log.ReplacementStrings.[3] = "0x0" then
+                  && log.TimeWritten > timeFilter then
                    yield log |]
         |> Array.Parallel.choose
             (fun log ->
@@ -74,5 +73,33 @@ module EventLog =
                 match log.ReplacementStrings.[18] |> IPAddress.TryParse with
                 | true, x when x <> IPAddress.Loopback -> Some x
                 | _ -> None)
-        |> Array.groupBy id
-        |> Array.Parallel.map fst
+
+module SetRule =
+    [<Literal>]
+    let RDP_TCP = @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress "
+
+    [<Literal>]
+    let RDP_UDP = @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress "
+
+    [<Literal>]
+    let SMB = @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress "
+
+    [<Literal>]
+    let WINRM = @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress "
+
+    [<Literal>]
+    let Sbf = @"Set-NetFirewallRule -PassThru -Name 'Stop-Bruteforce' -RemoteAddress "
+
+module NewRule =
+    [<Literal>]
+    let Sbf =
+        @"New-NetFirewallRule -Name 'Stop-Bruteforce' -DisplayName 'Stop-Bruteforce' -Action Block -Direction Inbound -Enabled True -RemoteAddress "
+
+module Err =
+    let permissionDenied x =
+        let exn = exn ("To use " + x + " , you need administrator rights")
+        ErrorRecord(exn, "1", ErrorCategory.PermissionDenied, x)
+
+    let newRule x =
+        let exn = exn "Can not create new firewall rule"
+        ErrorRecord(exn, "1", ErrorCategory.InvalidResult, x)

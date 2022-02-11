@@ -12,7 +12,7 @@ open Miscs
         Read Windows Event Log, search for Audit Failure and Audit success anonymous logon.
         Return array of BruteStatistics.
 
-         .EXAMPLE
+        .EXAMPLE
         Get-Bruteforce | Format-Table
 
         .INPUTS
@@ -27,12 +27,12 @@ type public GetBruteforce() =
     let mutable attempts = 10
     let mutable last = 24.0
 
-    [<Parameter(Position = 0); ValidateRange(1,65535)>]
+    [<Parameter(Position = 0); ValidateRange(1, 65535)>]
     member x.Attempts
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateRange(1,65535)>]
+    [<Parameter(Position = 1); ValidateRange(1, 65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
@@ -40,13 +40,10 @@ type public GetBruteforce() =
     override this.ProcessRecord() =
         match WindowsIdentity.GetCurrent() |> WindowsPrincipal with
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
-            EventLog.getFailureAudit last
-            |> Array.filter (fun i -> i.Attempts >= attempts)
+            EventLog.getFailureAudit this.Last
+            |> Array.filter (fun i -> i.Attempts >= this.Attempts)
             |> Array.iter this.WriteObject
-        | _ ->
-            let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
-
-            this.WriteError(ErrorRecord(exn, "1", ErrorCategory.PermissionDenied, "Get-Bruteforce"))
+        | _ -> Err.permissionDenied "Get-Bruteforce" |> this.WriteError
 
 
 (*
@@ -57,7 +54,7 @@ type public GetBruteforce() =
         Read Windows Event Log, search for Audit Failure.
         Adds ip addresses of attackers to deny firewall rule.
 
-         .EXAMPLE
+        .EXAMPLE
         #Block attackers ip addresses with default params.
         Stop-Bruteforce
 
@@ -74,12 +71,12 @@ type public StopBruteforce() =
     let mutable last = 24.0
     let mutable expire = SwitchParameter(false)
 
-    [<Parameter(Position = 0); ValidateRange(1,65535)>]
+    [<Parameter(Position = 0); ValidateRange(1, 65535)>]
     member x.Attempts
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateRange(1,65535)>]
+    [<Parameter(Position = 1); ValidateRange(1, 65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
@@ -92,45 +89,31 @@ type public StopBruteforce() =
     override this.ProcessRecord() =
         match WindowsIdentity.GetCurrent() |> WindowsPrincipal with
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
-            let report = EventLog.getFailureAudit last |> Array.filter (fun i -> i.Attempts >= attempts)
+            let report = EventLog.getFailureAudit this.Last |> Array.filter (fun i -> i.Attempts >= this.Attempts)
 
             let addresses = report |> Array.map (fun i -> i.IpAddress.ToString())
 
             match @"Get-NetFirewallRule 'Stop-Bruteforce' | Get-NetFirewallAddressFilter " |> Pwsh.invoke, addresses with
             | None, addresses when addresses <> [||] ->
-                match @"New-NetFirewallRule -Name 'Stop-Bruteforce' -DisplayName 'Stop-Bruteforce' -Action Block -Direction Inbound -Enabled True -RemoteAddress "
-                      + (addresses |> String.concat ",")
-                      |> Pwsh.invoke with
-                | Some _ -> report |> Array.filter (fun i -> i.Attempts >= attempts) |> Array.iter this.WriteObject
-                | None ->
-                    let exn = exn "Can not create new firewall rule"
+                match NewRule.Sbf + (addresses |> String.concat ",") |> Pwsh.invoke with
+                | Some _ -> report |> Array.filter (fun i -> i.Attempts >= this.Attempts) |> Array.iter this.WriteObject
+                | None -> Err.newRule "Stop-Bruteforce" |> this.WriteError
 
-                    (ErrorRecord(exn, "1", ErrorCategory.InvalidResult, "Stop-Bruteforce")) |> this.WriteError
-
-            | Some psObjectsOption, addresses ->
+            | Some psObjects, addresses ->
                 let before =
-                    match psObjectsOption :> PSObject seq |> Seq.tryHead, this.Expire.IsPresent with
+                    match psObjects :> PSObject seq |> Seq.tryHead, this.Expire.IsPresent with
                     | Some p, false -> p.Members.["RemoteAddress"].Value :?> string array
                     | _ -> Array.empty
 
                 let concat = [| before; addresses |] |> Array.concat |> Array.distinct |> String.concat ","
 
-                match @"Set-NetFirewallRule -PassThru -Name 'Stop-Bruteforce' -RemoteAddress " + concat |> Pwsh.invoke with
-                | Some _ ->
-                    this.WriteVerbose "New entries was added to Stop-Bruteforce rule"
-                    report |> Array.filter (fun i -> i.Attempts >= attempts) |> Array.iter this.WriteObject
-                | None ->
-                    let exn = exn "Wasn't able to set firewall rule"
-
-                    (ErrorRecord(exn, "1", ErrorCategory.InvalidResult, "Stop-Bruteforce")) |> this.WriteError
+                match SetRule.Sbf + concat |> Pwsh.invoke with
+                | Some _ -> report |> Array.filter (fun i -> i.Attempts >= this.Attempts) |> Array.iter this.WriteObject
+                | None -> Err.newRule "Stop-Bruteforce" |> this.WriteError
 
             | _ -> this.WriteWarning "No failed network logons was detected. Cmdlet did nothing."
 
-        | _ ->
-            let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
-
-            this.WriteError(ErrorRecord(exn, "1", ErrorCategory.PermissionDenied, "Stop-Bruteforce"))
-
+        | _ -> Err.permissionDenied "Stop-Bruteforce" |> this.WriteError
 
 
 (*
@@ -164,12 +147,12 @@ type public ProtectFromBruteforce() =
     let mutable smb: SwitchParameter = SwitchParameter(false)
     let mutable winRM: SwitchParameter = SwitchParameter(false)
 
-    [<Parameter(Position = 0); ValidateRange(1,65535)>]
+    [<Parameter(Position = 0); ValidateRange(1, 65535)>]
     member x.Attempts
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateRange(1,65535)>]
+    [<Parameter(Position = 1); ValidateRange(1, 65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
@@ -192,42 +175,37 @@ type public ProtectFromBruteforce() =
     override this.ProcessRecord() =
         match WindowsIdentity.GetCurrent() |> WindowsPrincipal with
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
-            match EventLog.getSuccessAudit last with
+            match EventLog.getSuccessAudit this.Last |> Array.groupBy id with
             | report when report <> [||] ->
-                let addresses = report |> Array.map (fun i -> i.ToString()) |> String.concat ","
+                let addresses =
+                    report
+                    |> Array.filter (fun (_, y) -> y.Length >= this.Attempts)
+                    |> Array.map (fun (x, _) -> x.ToString())
+                    |> String.concat ","
 
-                if rdp.IsPresent then
-                    match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress "
-                          + addresses
-                          |> Pwsh.invoke with
+                if this.RDP.IsPresent then
+                    match SetRule.RDP_TCP + addresses |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP TCP"
                     | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-TCP rule was not found"
 
-                    match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress "
-                          + addresses
-                          |> Pwsh.invoke with
+                    match SetRule.RDP_UDP + addresses |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for RDP UDP"
                     | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-UDP rule was not found"
 
-                if smb.IsPresent then
-                    match @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress " + addresses
-                          |> Pwsh.invoke with
+                if this.SMB.IsPresent then
+                    match SetRule.SMB + addresses |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for SMB"
                     | _ -> this.WriteWarning "FPS-SMB-In-TCP rule was not found"
 
-                if winRM.IsPresent then
-                    match @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress " + addresses
-                          |> Pwsh.invoke with
+                if this.WinRM.IsPresent then
+                    match SetRule.WINRM + addresses |> Pwsh.invoke with
                     | Some _ -> this.WriteVerbose "Standard firewall rule was set for WINRM"
                     | _ -> this.WriteWarning "WINRM-HTTP-In-TCP-PUBLIC rule was not found"
 
-                report |> Array.iter this.WriteObject
+                report |> Array.iter (fun (x, _) -> this.WriteObject x)
             | _ -> this.WriteWarning "No successful network logons was detected. Cmdlet did nothing."
 
-        | _ ->
-            let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
-
-            this.WriteError(ErrorRecord(exn, "1", ErrorCategory.PermissionDenied, "Protect-FromBruteforce"))
+        | _ -> Err.permissionDenied "Protect-FromBruteforce" |> this.WriteError
 
 
 (*
@@ -272,28 +250,22 @@ type public UnprotectFromBruteforce() =
     override this.ProcessRecord() =
         match WindowsIdentity.GetCurrent() |> WindowsPrincipal with
         | principal when principal.IsInRole WindowsBuiltInRole.Administrator ->
-            if rdp.IsPresent then
-                match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-TCP' -RemoteAddress ANY"
-                      |> Pwsh.invoke with
+            if this.RDP.IsPresent then
+                match SetRule.RDP_TCP + "ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP TCP"
                 | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-TCP rule was not found"
 
-                match @"Set-NetFirewallRule -PassThru -Name 'RemoteDesktop-UserMode-In-UDP' -RemoteAddress ANY"
-                      |> Pwsh.invoke with
+                match SetRule.RDP_UDP + "ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for RDP UDP"
                 | _ -> this.WriteWarning "RemoteDesktop-UserMode-In-UDP rule was not found"
 
-            if smb.IsPresent then
-                match @"Set-NetFirewallRule -PassThru -Name 'FPS-SMB-In-TCP' -RemoteAddress ANY" |> Pwsh.invoke with
+            if this.SMB.IsPresent then
+                match SetRule.SMB + "ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for SMB"
                 | _ -> this.WriteWarning "FPS-SMB-In-TCP rule was not found"
 
-            if winRM.IsPresent then
-                match @"Set-NetFirewallRule -PassThru -Name 'WINRM-HTTP-In-TCP-PUBLIC' -RemoteAddress ANY"
-                      |> Pwsh.invoke with
+            if this.WinRM.IsPresent then
+                match SetRule.WINRM + "ANY" |> Pwsh.invoke with
                 | Some _ -> this.WriteVerbose "Standard firewall rule was reset for WINRM"
                 | _ -> this.WriteWarning "WINRM-HTTP-In-TCP-PUBLIC rule was not found"
-        | _ ->
-            let exn = exn "To use Protect-FromBruteforce, you need administrator rights"
-
-            this.WriteError(ErrorRecord(exn, "1", ErrorCategory.PermissionDenied, "Protect-FromBruteforce"))
+        | _ -> Err.permissionDenied "Unprotect-FromBruteforce" |> this.WriteError
