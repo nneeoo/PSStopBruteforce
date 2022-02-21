@@ -24,7 +24,7 @@ open Miscs
 [<Cmdlet(VerbsCommon.Get, "Bruteforce")>]
 type public GetBruteforce() =
     inherit Cmdlet()
-    let mutable attempts = 10
+    let mutable attempts = 1
     let mutable last = 24.0
 
     [<Parameter(Position = 0); ValidateRange(1, 65535)>]
@@ -101,8 +101,8 @@ type public StopBruteforce() =
 
             | Some psObjects, addresses ->
                 let before =
-                    match psObjects :> PSObject seq |> Seq.tryHead, this.Expire.IsPresent with
-                    | Some p, false -> p.Members.["RemoteAddress"].Value :?> string array
+                    match psObjects |> Seq.tryHead, this.Expire.IsPresent with
+                    | Some p, false -> downcast p.Members.["RemoteAddress"].Value
                     | _ -> Array.empty
 
                 let concat = [| before; addresses |] |> Array.concat |> Array.distinct |> String.concat ","
