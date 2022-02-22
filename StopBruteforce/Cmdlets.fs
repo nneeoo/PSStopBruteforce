@@ -32,7 +32,7 @@ type public GetBruteforce() =
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateRange(1, 65535)>]
+    [<Parameter(Position = 1); ValidateRange(0.01, 65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
@@ -76,7 +76,7 @@ type public StopBruteforce() =
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateRange(1, 65535)>]
+    [<Parameter(Position = 1); ValidateRange(0.01, 65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
@@ -152,7 +152,7 @@ type public ProtectFromBruteforce() =
         with get () = attempts
         and set v = attempts <- v
 
-    [<Parameter(Position = 1); ValidateRange(1, 65535)>]
+    [<Parameter(Position = 1); ValidateRange(0.01, 65535)>]
     member x.Last
         with get () = last
         and set v = last <- v
