@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net472</TargetFramework>
         <OutputType>Library</OutputType>
+        <TargetFrameworks>net472;net48</TargetFrameworks>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <DebugSymbols>true</DebugSymbols>
@@ -21,11 +21,9 @@
         <Content Include="StopBruteforce.psd1">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
-        <Compile Include="Miscs.fs"/>
-        <Compile Include="Cmdlets.fs"/>
-        <Reference Include="System.Management.Automation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
-            <HintPath>..\..\..\..\..\Windows\assembly\GAC_MSIL\System.Management.Automation\1.0.0.0__31bf3856ad364e35\System.Management.Automation.dll</HintPath>
-        </Reference>
-        <PackageReference Update="FSharp.Core" Version="6.0.3"/>
+        <Compile Include="Miscs.fs" />
+        <Compile Include="Cmdlets.fs" />
+        <PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
+        <PackageReference Update="FSharp.Core" Version="6.0.4" />
     </ItemGroup>
 </Project>

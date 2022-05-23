@@ -4,6 +4,7 @@ open System
 open System.Diagnostics
 open System.Net
 open System.Management.Automation
+open System.Linq
 
 [<Struct; NoEquality; NoComparison>]
 type Report =
@@ -31,48 +32,42 @@ let tryResolve (x: IPAddress) =
     | _ -> "None"
 
 module EventLog =
+    let getSecurityLogs () =
+        EventLog.GetEventLogs() |> Array.find (fun (i: EventLog) -> i.Log = "Security")
+
     let getFailureAudit (l: float) =
         let timeFilter = DateTime.Now.AddHours(-l)
 
-        let securityLogs = EventLog.GetEventLogs() |> Array.find (fun (i: EventLog) -> i.Log = "Security")
-
-        [| for log in securityLogs.Entries do
-               if log.InstanceId = 4625L
-                  && log.EntryType = EventLogEntryType.FailureAudit
-                  && log.TimeWritten > timeFilter then
-                   yield log |]
-        |> Array.Parallel.choose
-            (fun log ->
-                match log.ReplacementStrings.[19] |> IPAddress.TryParse with
-                | true, x when x <> IPAddress.Loopback ->
-                    { IpAddress = x
-                      Name = log.ReplacementStrings.[5] }
-                    |> Some
-                | _ -> None)
+        getSecurityLogs().Entries.Cast()
+        |> Array.ofSeq
+        |> Array.filter (fun (log: EventLogEntry) ->
+            log.InstanceId = 4625L && log.EntryType = EventLogEntryType.FailureAudit && log.TimeWritten > timeFilter)
+        |> Array.Parallel.choose (fun log ->
+            match log.ReplacementStrings.[19] |> IPAddress.TryParse with
+            | true, x when x <> IPAddress.Loopback ->
+                { IpAddress = x
+                  Name = log.ReplacementStrings.[5] }
+                |> Some
+            | _ -> None)
         |> Array.groupBy (fun i -> i.IpAddress)
-        |> Array.Parallel.map
-            (fun (ip, entries) ->
-                { Attempts = entries.Length
-                  IpAddress = ip
-                  HostName = tryResolve ip
-                  Names = entries |> Array.map (fun i -> i.Name) |> Array.distinct })
+        |> Array.Parallel.map (fun (ip, entries) ->
+            { Attempts = entries.Length
+              IpAddress = ip
+              HostName = tryResolve ip
+              Names = entries |> Array.map (fun i -> i.Name) |> Array.distinct })
 
 
     let getSuccessAudit (l: float) =
         let timeFilter = DateTime.Now.AddHours(-l)
 
-        let securityLogs = EventLog.GetEventLogs() |> Array.find (fun (i: EventLog) -> i.Log = "Security")
-
-        [| for log in securityLogs.Entries do
-               if log.InstanceId = 4624L
-                  && log.EntryType = EventLogEntryType.SuccessAudit
-                  && log.TimeWritten > timeFilter then
-                   yield log |]
-        |> Array.Parallel.choose
-            (fun log ->
-                match log.ReplacementStrings.[18] |> IPAddress.TryParse with
-                | true, x when x <> IPAddress.Loopback -> Some x
-                | _ -> None)
+        getSecurityLogs().Entries.Cast()
+        |> Array.ofSeq
+        |> Array.filter (fun (log: EventLogEntry) ->
+            log.InstanceId = 4624L && log.EntryType = EventLogEntryType.SuccessAudit && log.TimeWritten > timeFilter)
+        |> Array.Parallel.choose (fun log ->
+            match log.ReplacementStrings.[18] |> IPAddress.TryParse with
+            | true, x when x <> IPAddress.Loopback -> Some x
+            | _ -> None)
 
 module SetRule =
     [<Literal>]
